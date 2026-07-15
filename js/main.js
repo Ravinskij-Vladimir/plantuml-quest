@@ -9,6 +9,7 @@ import * as GameCode from './game-code.js';
 import * as GameDescribe from './game-describe.js';
 import * as renderer from './renderer.js';
 import { PlantUMLValidator } from './validator.js';
+import { PlantUMLAPI } from './plantuml-api.js';
 
 const MODULES = { puzzle: GamePuzzle, code: GameCode, describe: GameDescribe };
 const MODE_META = {
