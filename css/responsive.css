@@ -1,6 +1,15 @@
 /* responsive.css: адаптив под мобильные устройства */
 
 @media (max-width: 768px) {
+  .home-footer-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .achievements-grid {
+    grid-template-columns: 1fr;
+  }
+
   .app-header {
     padding: 0.75rem 1rem;
   }

@@ -2,6 +2,7 @@ import { GameState } from './state.js';
 import { LEVELS, getLevel } from './levels.js';
 import { THEORY, getTheoryByLevel } from './theory.js';
 import { PROJECTS, getProjectById } from './projects.js';
+import { ACHIEVEMENTS, getAchievementDef } from './state.js';
 import { initUI, showToast, showModal, hideModal, confetti } from './ui.js';
 import { initAccessibility } from './accessibility.js';
 import * as GamePuzzle from './game-puzzle.js';
@@ -40,6 +41,26 @@ function bindEvents() {
   document.getElementById('back-to-theory').addEventListener('click', () => navigate('theory'));
   document.getElementById('back-to-home-from-projects').addEventListener('click', () => navigate('home'));
   document.getElementById('back-to-projects').addEventListener('click', () => navigate('projects'));
+  document.getElementById('back-to-home-from-achievements').addEventListener('click', () => navigate('home'));
+
+  // Reset progress button
+  document.getElementById('btn-reset-progress').addEventListener('click', () => {
+    showModal(
+      'Сбросить весь прогресс?',
+      'Это действие удалит все твои достижения, звёзды, прочитанную теорию и завершённые проекты. Отменить это действие будет невозможно.',
+      [
+        { label: 'Да, сбросить', primary: false, onClick: () => {
+          GameState.reset();
+          showToast('Прогресс сброшен. Начни заново!', 'info');
+          navigate('home');
+        }},
+        { label: 'Отмена', primary: true, onClick: () => {} }
+      ]
+    );
+  });
+
+  // Achievements button
+  document.getElementById('btn-open-achievements').addEventListener('click', () => navigate('achievements'));
   document.getElementById('btn-check').addEventListener('click', () => {
     if (!current.instance?.check) return;
     try {
@@ -106,6 +127,7 @@ function navigate(screen, ...args) {
   else if (screen === 'theory-detail') location.hash = `theory/${args[0]}`;
   else if (screen === 'projects') location.hash = 'projects';
   else if (screen === 'project-detail') location.hash = `project/${args[0]}`;
+  else if (screen === 'achievements') location.hash = 'achievements';
 }
 
 function toggleTheme() {
@@ -622,6 +644,65 @@ function setupProjectEditor(project) {
   doRender();
 }
 
+// ------------------- achievements -------------------
+function renderAchievements() {
+  showScreen('screen-achievements');
+  const grid = document.getElementById('achievements-grid');
+  const statsEl = document.getElementById('achievements-stats');
+  grid.innerHTML = '';
+
+  const unlocked = GameState.data.achievements || [];
+  const total = ACHIEVEMENTS.length;
+  const unlockedCount = ACHIEVEMENTS.filter(a => unlocked.includes(a.key)).length;
+
+  statsEl.innerHTML = `
+    <span>🏅</span>
+    <span>Разблокировано: <span class="achievements-stats__count">${unlockedCount}</span> / ${total}</span>
+    <span style="margin-left:auto;color:var(--text-secondary);font-size:0.85rem">${Math.round((unlockedCount / total) * 100)}%</span>
+  `;
+
+  // Category order
+  const categoryLabels = {
+    progress: '📈 Прогресс',
+    skill: '🎯 Умения',
+    knowledge: '🧠 Знания',
+    completion: '✅ Завершение'
+  };
+
+  // Group by category
+  const grouped = {};
+  ACHIEVEMENTS.forEach((a) => {
+    if (!grouped[a.category]) grouped[a.category] = [];
+    grouped[a.category].push(a);
+  });
+
+  Object.keys(categoryLabels).forEach((cat) => {
+    const items = grouped[cat];
+    if (!items) return;
+
+    const sectionTitle = document.createElement('h3');
+    sectionTitle.className = 'home-section-title';
+    sectionTitle.textContent = categoryLabels[cat];
+    sectionTitle.style.marginTop = '1.5rem';
+    grid.appendChild(sectionTitle);
+
+    items.forEach((achievement) => {
+      const isUnlocked = unlocked.includes(achievement.key);
+      const card = document.createElement('div');
+      card.className = `card achievement-card ${isUnlocked ? 'unlocked' : 'locked'}`;
+      card.innerHTML = `
+        <div class="achievement-card__icon">${achievement.icon}</div>
+        <div class="achievement-card__info">
+          <div class="achievement-card__name">${achievement.name}</div>
+          <div class="achievement-card__desc">${achievement.description}</div>
+          <div class="achievement-card__status">${isUnlocked ? '✅ Разблокировано' : '🔒 Заблокировано'}</div>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  });
+}
+
 // ------------------- routing & extras -------------------
 function handleHash() {
   const hash = location.hash.replace(/^#/, '');
@@ -650,6 +731,9 @@ function handleHash() {
   } else if (parts[0] === 'projects') {
     showScreen('screen-projects');
     renderProjects();
+  } else if (parts[0] === 'achievements') {
+    showScreen('screen-achievements');
+    renderAchievements();
   } else {
     showScreen('screen-home');
     renderHome();
@@ -657,12 +741,10 @@ function handleHash() {
 }
 
 function showAchievements(list) {
-  const names = {
-    perfectionist: 'Перфекционист',
-    'code-master': 'Мастер кода'
-  };
   list.forEach((key) => {
-    showToast(`🏆 Достижение разблокировано: ${names[key] || key}`, 'success', 5000);
+    const def = getAchievementDef(key);
+    const name = def ? `${def.icon} ${def.name}` : key;
+    showToast(`🏆 Достижение разблокировано: ${name}`, 'success', 5000);
   });
 }
 

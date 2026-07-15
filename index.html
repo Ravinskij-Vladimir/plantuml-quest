@@ -29,6 +29,10 @@
           <p class="lead">Собирай диаграммы из плиток, пиши код с нуля и превращай описания на естественном языке в схемы.</p>
         </div>
         <div id="mode-cards"></div>
+        <div class="home-footer-actions">
+          <button id="btn-open-achievements" class="btn btn-ghost home-action-btn" type="button">🏆 Достижения</button>
+          <button id="btn-reset-progress" class="btn btn-ghost btn-danger home-action-btn" type="button">🗑️ Сбросить прогресс</button>
+        </div>
       </section>
 
       <section id="screen-levels" class="screen" aria-label="Выбор уровня">
@@ -61,6 +65,15 @@
           <h2 id="projects-title">Практические проекты</h2>
         </div>
         <div id="projects-grid" class="levels-grid"></div>
+      </section>
+
+      <section id="screen-achievements" class="screen" aria-label="Достижения">
+        <div class="levels-header">
+          <button id="back-to-home-from-achievements" class="btn btn-ghost" type="button">← На главную</button>
+          <h2 id="achievements-title">🏆 Достижения</h2>
+        </div>
+        <div id="achievements-stats" class="achievements-stats"></div>
+        <div id="achievements-grid" class="achievements-grid"></div>
       </section>
 
       <section id="screen-project-detail" class="screen" aria-label="Детали проекта">

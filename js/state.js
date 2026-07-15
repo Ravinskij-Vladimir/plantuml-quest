@@ -4,6 +4,105 @@ import { PROJECTS } from './projects.js';
 
 const STORAGE_KEY = 'plantuml-game';
 
+/** Full achievements registry — metadata for the badges screen */
+export const ACHIEVEMENTS = [
+  {
+    key: 'first-steps',
+    name: 'Первые шаги',
+    icon: '🌱',
+    description: 'Пройди свой первый уровень (Пазл)',
+    category: 'progress'
+  },
+  {
+    key: 'perfectionist',
+    name: 'Перфекционист',
+    icon: '💎',
+    description: 'Получи 3 звезды на всех уровнях',
+    category: 'skill'
+  },
+  {
+    key: 'code-master',
+    name: 'Мастер кода',
+    icon: '⌨️',
+    description: 'Пройди 5 уровней режима «Код» без подсказок',
+    category: 'skill'
+  },
+  {
+    key: 'puzzle-solver',
+    name: 'Решатель пазлов',
+    icon: '🧩',
+    description: 'Пройди все пазлы (13 уровней)',
+    category: 'progress'
+  },
+  {
+    key: 'diagram-master',
+    name: 'Мастер диаграмм',
+    icon: '📊',
+    description: 'Пройди все уровни до конца (все 3 режима)',
+    category: 'completion'
+  },
+  {
+    key: 'theory-lover',
+    name: 'Знаток теории',
+    icon: '📚',
+    description: 'Прочитай все материалы теории',
+    category: 'knowledge'
+  },
+  {
+    key: 'practitioner',
+    name: 'Практик',
+    icon: '🛠️',
+    description: 'Заверши хотя бы один практический проект',
+    category: 'completion'
+  },
+  {
+    key: 'project-master',
+    name: 'Мастер проектов',
+    icon: '🏗️',
+    description: 'Заверши все практические проекты',
+    category: 'completion'
+  },
+  {
+    key: 'no-hints-hero',
+    name: 'Без подсказок',
+    icon: '🦸',
+    description: 'Пройди 10 уровней без единой подсказки',
+    category: 'skill'
+  },
+  {
+    key: 'speed-runner',
+    name: 'Спидраннер',
+    icon: '⚡',
+    description: 'Потрати менее 30 секунд на прохождение любого режима',
+    category: 'skill'
+  },
+  {
+    key: 'half-way',
+    name: 'На полпути',
+    icon: '🗺️',
+    description: 'Пройди хотя бы половину уровней (7 из 13)',
+    category: 'progress'
+  },
+  {
+    key: 'triple-star',
+    name: 'Три звезды!',
+    icon: '🌟',
+    description: 'Получи 3 звезды хотя бы на одном уровне',
+    category: 'skill'
+  },
+  {
+    key: 'all-types',
+    name: 'Все типы',
+    icon: '🎨',
+    description: 'Пройди хотя бы один уровень каждого типа диаграмм (sequence, class, usecase, state, activity, component)',
+    category: 'knowledge'
+  }
+];
+
+export function getAchievementDef(key) {
+  return ACHIEVEMENTS.find(a => a.key === key);
+}
+
 function deepClone(obj) {
   try {
     return JSON.parse(JSON.stringify(obj));
@@ -164,17 +263,131 @@ export const GameState = {
     return levels.LEVELS.reduce((sum, l) => sum + (this.getLevelProgress(l.id).codeNoHint ? 1 : 0), 0);
   },
 
+  countAllModesCompleted() {
+    return levels.LEVELS.reduce((sum, l) => {
+      const p = this.getLevelProgress(l.id);
+      return sum + (p.puzzle && p.code && p.describe ? 1 : 0);
+    }, 0);
+  },
+
+  countNoHintLevels() {
+    return levels.LEVELS.reduce((sum, l) => {
+      const p = this.getLevelProgress(l.id);
+      return sum + (p.hints === 0 && (p.puzzle || p.code || p.describe) ? 1 : 0);
+    }, 0);
+  },
+
+  hasCompletedAnyMode() {
+    return levels.LEVELS.some((l) => {
+      const p = this.getLevelProgress(l.id);
+      return p.puzzle || p.code || p.describe;
+    });
+  },
+
+  getPuzzleCount() {
+    return levels.LEVELS.reduce((sum, l) => sum + (this.getLevelProgress(l.id).puzzle ? 1 : 0), 0);
+  },
+
+  getCompletedLevelCount() {
+    return levels.LEVELS.reduce((sum, l) => {
+      const p = this.getLevelProgress(l.id);
+      return sum + (p.puzzle && p.code && p.describe ? 1 : 0);
+    }, 0);
+  },
+
+  hasAnyThreeStars() {
+    return levels.LEVELS.some((l) => this.getLevelProgress(l.id).stars === 3);
+  },
+
+  hasCompletedType(type) {
+    return levels.LEVELS.some((l) => l.type === type && this.getLevelProgress(l.id).puzzle);
+  },
+
+  getCompletedTypes() {
+    const types = new Set();
+    levels.LEVELS.forEach((l) => {
+      if (this.getLevelProgress(l.id).puzzle) types.add(l.type);
+    });
+    return types;
+  },
+
+  hasFastCompletion() {
+    return levels.LEVELS.some((l) => {
+      const p = this.getLevelProgress(l.id);
+      return p.time > 0 && p.time < 30 && (p.puzzle || p.code || p.describe);
+    });
+  },
+
   checkAchievements() {
     const old = new Set(this.data.achievements);
     const next = [];
 
+    // First Steps — completed any level (puzzle mode)
+    if (this.hasCompletedAnyMode()) next.push('first-steps');
+
+    // Perfectionist — all 3 stars
     const allThreeStars = levels.LEVELS.every(
       (l) => this.getLevelProgress(l.id).stars === 3
     );
     if (allThreeStars) next.push('perfectionist');
 
+    // Code Master — 5 levels code without hints
     if (this.countCodeNoHints() >= Math.min(5, levels.LEVELS.length)) {
       next.push('code-master');
+    }
+
+    // Puzzle Solver — all puzzles done
+    if (this.getPuzzleCount() >= levels.LEVELS.length) {
+      next.push('puzzle-solver');
+    }
+
+    // Diagram Master — all levels fully completed
+    if (this.getCompletedLevelCount() >= levels.LEVELS.length) {
+      next.push('diagram-master');
+    }
+
+    // Theory Lover — all theory read
+    const theoryStats = this.getTheoryStats();
+    if (theoryStats.total > 0 && theoryStats.read >= theoryStats.total) {
+      next.push('theory-lover');
+    }
+
+    // Practitioner — completed at least one project
+    const projectStats = this.getProjectStats();
+    if (projectStats.completed >= 1) {
+      next.push('practitioner');
+    }
+
+    // Project Master — all projects completed
+    if (projectStats.total > 0 && projectStats.completed >= projectStats.total) {
+      next.push('project-master');
+    }
+
+    // No Hints Hero — 10 levels without hints
+    if (this.countNoHintLevels() >= 10) {
+      next.push('no-hints-hero');
+    }
+
+    // Half Way — 7+ levels completed
+    if (this.getCompletedLevelCount() >= 7) {
+      next.push('half-way');
+    }
+
+    // Triple Star — any level with 3 stars
+    if (this.hasAnyThreeStars()) {
+      next.push('triple-star');
+    }
+
+    // All Types — one of each diagram type
+    const allTypes = ['sequence', 'class', 'usecase', 'state', 'activity', 'component'];
+    const completedTypes = this.getCompletedTypes();
+    if (allTypes.every((t) => completedTypes.has(t))) {
+      next.push('all-types');
+    }
+
+    // Speed Runner — any mode under 30s
+    if (this.hasFastCompletion()) {
+      next.push('speed-runner');
     }
 
     const unique = [...new Set([...this.data.achievements, ...next])];
