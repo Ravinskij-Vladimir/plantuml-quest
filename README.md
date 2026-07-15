@@ -20,16 +20,36 @@
 
 ## 🚀 Быстрый старт
 
-### Требования
-- **Node.js 18+**
-- **PlantUML-running PlantUML server on `http://localhost:8080`
+### Вариант 1: Docker (рекомендуется)
 
-### Запуск PlantUML сервера (Docker)
+Запускайте всё одной командой — фронтенд + PlantUML сервер:
+
+```bash
+git clone https://github.com/Ravinskij-Vladimir/plantuml-quest.git
+cd plantUMLGame
+docker compose up --build
+```
+
+- **Игра** → http://localhost:3000
+- **PlantUML** → http://localhost:8080
+
+Остановка:
+```bash
+docker compose down
+```
+
+### Вариант 2: Локально
+
+**Требования:**
+- **Node.js 18+**
+- **PlantUML сервер** (Docker или standalone) на `http://localhost:8080`
+
+Запуск PlantUML сервера:
 ```bash
 docker run -d -p 8080:8080 plantuml/plantuml-server:jetty
 ```
 
-### Запуск игры
+Запуск игры:
 ```bash
 cd plantuml-game
 npm install
@@ -46,6 +66,8 @@ npm start
 plantuml-game/
 ├── index.html              # SPA: 3 экрана (home, levels, game)
 ├── server.js               # Node.js сервер (порт 3000) + прокси PlantUML
+├── Dockerfile              # Сборка контейнера
+├── .dockerignore
 ├── package.json
 ├── css/
 │   ├── base.css            # CSS-переменные, темы dark/light, reset, типографика
@@ -149,11 +171,11 @@ plantuml-game/
 export const API_BASE = 'http://localhost:8080'; // по умолчанию пусто — прокси через сервер
 ```
 
-В `server.js` настраивается прокси:
-```js
-const PORT = 3000;
-const PLANTUML_HOST = 'localhost';
-const PLANTUML_PORT = 8080;
+В `server.js` прокси настраивается через переменные окружения:
+```bash
+PORT=3000               # порт фронтенда (по умолчанию 3000)
+PLANTUML_HOST=localhost   # хост PlantUML (по умолчанию localhost, в Docker — "plantuml")
+PLANTUML_PORT=8080       # порт PlantUML (по умолчанию 8080)
 ```
 
 ---
@@ -161,7 +183,9 @@ const PLANTUML_PORT = 8080;
 ## 📦 Скрипты
 
 ```bash
-npm start      # Запуск сервера (порт 3000)
+npm start                  # Запуск сервера (порт 3000)
+docker compose up --build  # Запуск в Docker (frontend + PlantUML)
+docker compose down        # Остановка контейнеров
 ```
 
 ---
