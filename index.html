@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Браузерная игра для изучения PlantUML: пазлы, написание кода и генерация диаграмм из описаний.">
+  <title>PlantUML Quest — изучение диаграмм</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/game-modes.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">К основному содержимому</a>
+  <div id="app" class="app">
+    <header class="app-header">
+      <div class="brand" role="banner">
+        <span class="logo" aria-hidden="true">🌱</span>
+        <span class="brand-name">PlantUML Quest</span>
+      </div>
+      <button id="theme-toggle" class="btn btn-icon" type="button" aria-label="Переключить тему">🌓</button>
+    </header>
+
+    <main id="main-content" class="main-content">
+      <section id="screen-home" class="screen is-active" aria-label="Главный экран">
+        <div class="hero">
+          <h1>Выучи PlantUML, играя</h1>
+          <p class="lead">Собирай диаграммы из плиток, пиши код с нуля и превращай описания на естественном языке в схемы.</p>
+        </div>
+        <div id="mode-cards" class="mode-cards"></div>
+      </section>
+
+      <section id="screen-levels" class="screen" aria-label="Выбор уровня">
+        <div class="levels-header">
+          <button id="back-to-home" class="btn btn-ghost" type="button">← На главную</button>
+          <h2 id="levels-title">Уровни</h2>
+        </div>
+        <div id="levels-grid" class="levels-grid"></div>
+      </section>
+
+      <section id="screen-game" class="screen" aria-label="Игровой экран">
+        <div class="game-header">
+          <button id="back-to-levels" class="btn btn-ghost" type="button">← К уровням</button>
+          <div class="game-meta">
+            <h2 id="game-title"></h2>
+            <div id="game-stars" class="stars" aria-label="Звёзды уровня"></div>
+          </div>
+          <div class="game-tabs" role="tablist" aria-label="Режимы уровня">
+            <button id="tab-puzzle" class="tab" role="tab" data-mode="puzzle" aria-controls="game-area" type="button">Пазл</button>
+            <button id="tab-code" class="tab" role="tab" data-mode="code" aria-controls="game-area" type="button">Код</button>
+            <button id="tab-describe" class="tab" role="tab" data-mode="describe" aria-controls="game-area" type="button">Описание</button>
+          </div>
+        </div>
+        <div id="game-area" class="game-area" role="tabpanel"></div>
+        <div id="game-actions" class="game-actions">
+          <button id="btn-restart" class="btn btn-ghost" type="button">🔄 Перерешать</button>
+          <button id="btn-show-answer" class="btn btn-ghost" type="button">👁 Показать ответ</button>
+          <button id="btn-hint" class="btn btn-secondary" type="button">💡 Подсказка</button>
+          <button id="btn-check" class="btn btn-primary" type="button">✓ Проверить</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="modal-overlay" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-title">Заголовок</h3>
+        <button id="modal-close" class="btn btn-icon" type="button" aria-label="Закрыть">✕</button>
+      </div>
+      <div id="modal-body" class="modal-body"></div>
+      <div id="modal-footer" class="modal-footer"></div>
+    </div>
+  </div>
+
+  <div id="toast-stack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

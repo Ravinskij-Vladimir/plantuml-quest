@@ -1,0 +1,26 @@
+{
+  "name": "plantuml-quest",
+  "version": "1.0.0",
+  "description": "Браузерная игра для изучения PlantUML — пазлы, написание кода и генерация из описания",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "plantuml",
+    "game",
+    "education",
+    "diagrams",
+    "learning"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/plantuml-quest.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/plantuml-quest/issues"
+  },
+  "homepage": "https://github.com/your-username/plantuml-quest#readme"
+}

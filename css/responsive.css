@@ -1,0 +1,97 @@
+/* responsive.css: адаптив под мобильные устройства */
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .main-content {
+    padding: 1rem;
+  }
+
+  .hero {
+    margin-bottom: 1.5rem;
+  }
+
+  .hero h1 {
+    font-size: 1.65rem;
+  }
+
+  .game-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .game-tabs {
+    width: 100%;
+  }
+
+  .tab {
+    flex: 1;
+    text-align: center;
+  }
+
+  .code-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .code-layout .editor-wrap {
+    order: 1;
+  }
+
+  .code-layout .preview {
+    order: 2;
+  }
+
+  .editor__textarea,
+  .editor__highlight {
+    height: 280px;
+    min-height: 280px;
+  }
+
+  .game-actions {
+    justify-content: stretch;
+  }
+
+  .game-actions .btn {
+    flex: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-name {
+    font-size: 1rem;
+  }
+
+  .lead {
+    font-size: 1rem;
+  }
+
+  .mode-card__icon {
+    font-size: 2rem;
+  }
+
+  .levels-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .preview__toolbar {
+    justify-content: flex-start;
+  }
+
+  .editor__numbers {
+    width: 2.25rem;
+  }
+
+  .editor__textarea,
+  .editor__highlight {
+    margin-left: 2.25rem;
+    width: calc(100% - 2.25rem);
+    padding: 0.45rem 0.6rem;
+  }
+
+  .editor__highlight {
+    left: 2.25rem;
+  }
+}
