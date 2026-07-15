@@ -34,7 +34,7 @@ export function start(level, container, callbacks) {
   return {
     showHint: () => showNextHint(d, state),
     hint: () => showNextHint(d, state),
-    showAnswer: () => showAnswer(d, callbacks, state, container),
+    showAnswer: () => showAnswer(d, level, callbacks, state, container),
     stop: () => { container.innerHTML = ''; }
   };
 }
@@ -48,23 +48,151 @@ function showNextHint(d, state) {
   }
 }
 
-function showAnswer(d, callbacks, state, container) {
-  const code = d.template || d.expected;
-  state.generatedCode = code;
+function showAnswer(d, level, callbacks, state, container) {
+  // Используем code.expected из уровня как эталон, если есть
+  const referenceCode = level.code?.expected || d.template || d.expected;
+  state.generatedCode = referenceCode;
 
-  // Показываем правильный ответ в контейнере
+  if (d.kind === 'guided') {
+    fillGuidedAnswer(d, referenceCode, container);
+  } else {
+    fillFreeAnswer(d, referenceCode, container);
+  }
+
+  // Также показываем код в области результата/превью
   const resultArea = container.querySelector('#describe-result') || container.querySelector('#free-preview');
   if (resultArea) {
     resultArea.hidden = false;
-    resultArea.innerHTML = `<pre style="background:var(--bg-primary);padding:0.75rem;border-radius:0.5rem;overflow:auto;font-family:var(--font-mono);font-size:0.88rem">${escapeHtml(code)}</pre>`;
-  } else {
-    // Если контейнера нет, просто показываем код в модальном окне
-    showModal('Правильный ответ', `<pre style="background:var(--bg-primary);padding:0.75rem;border-radius:0.5rem;overflow:auto;font-family:var(--font-mono)">${escapeHtml(code)}</pre>`, [
-      { label: 'Закрыть', primary: true }
-    ]);
+    resultArea.innerHTML = `<pre style="background:var(--bg-primary);padding:0.75rem;border-radius:0.5rem;overflow:auto;font-family:var(--font-mono);font-size:0.88rem">${escapeHtml(referenceCode)}</pre>`;
+    // Попробуем отрендерить превью
+    import('./renderer.js').then(m => m.renderPreview(resultArea, referenceCode)).catch(() => {});
   }
 
   callbacks.onComplete({ usedHint: true, showAnswer: true });
+}
+
+function fillGuidedAnswer(d, referenceCode, container) {
+  // 1. Выбираем правильный тип диаграммы
+  const typeSelect = container.querySelector('#desc-type');
+  if (typeSelect) {
+    typeSelect.value = d.expectedType;
+  }
+
+  // 2. Нажимаем кнопку генерации шаблона (если еще не нажата)
+  const generateBtn = container.querySelector('#desc-generate');
+  const templateArea = container.querySelector('#template-area');
+  
+  if (generateBtn && !generateBtn.disabled) {
+    // Симулируем клик по кнопке генерации
+    generateBtn.click();
+    // Небольшая задержка, чтобы шаблон успел отрисоваться
+    setTimeout(() => {
+      fillTemplateInputsFromReference(d.template, referenceCode, container);
+    }, 50);
+  } else if (templateArea && !templateArea.hidden) {
+    // Шаблон уже показан, просто заполняем инпуты
+    fillTemplateInputsFromReference(d.template, referenceCode, container);
+  }
+}
+
+function fillTemplateInputsFromReference(template, referenceCode, container) {
+  const templateArea = container.querySelector('#template-area');
+  if (!templateArea) return;
+
+  const inputs = templateArea.querySelectorAll('input[type="text"]');
+  if (inputs.length === 0) return;
+
+  // Простой алгоритм: разбираем template и referenceCode по строкам
+  // и извлекаем значения для каждого ___
+  const templateLines = template.split('\n');
+  const referenceLines = referenceCode.split('\n');
+  
+  const values = [];
+  let refLineIdx = 0;
+  
+  for (const tLine of templateLines) {
+    if (refLineIdx >= referenceLines.length) break;
+    
+    const parts = tLine.split('___');
+    if (parts.length <= 1) {
+      // Строка без заполнителей - просто продвигаемся по referenceLines
+      // пытаясь найти совпадение
+      while (refLineIdx < referenceLines.length && 
+             referenceLines[refLineIdx].trim() !== tLine.trim() && 
+             !referenceLines[refLineIdx].includes(parts[0].trim().slice(-10))) {
+        refLineIdx++;
+      }
+      if (refLineIdx < referenceLines.length) refLineIdx++;
+      continue;
+    }
+    
+    // Есть заполнители в этой строке
+    let currentRefLine = referenceLines[refLineIdx] || '';
+    let searchStart = 0;
+    
+    for (let i = 0; i < parts.length - 1; i++) {
+      const prefix = parts[i];
+      const prefixEnd = currentRefLine.indexOf(prefix, searchStart);
+      
+      let value = '';
+      if (prefixEnd !== -1) {
+        const valueStart = prefixEnd + prefix.length;
+        // Ищем следующий префикс или конец строки
+        let nextPrefix = parts[i + 1];
+        let valueEnd = currentRefLine.length;
+        if (i + 1 < parts.length - 1) {
+          valueEnd = currentRefLine.indexOf(nextPrefix, valueStart);
+          if (valueEnd === -1) valueEnd = currentRefLine.length;
+        }
+        value = currentRefLine.substring(valueStart, valueEnd).trim();
+        searchStart = valueEnd;
+      }
+      values.push(value);
+    }
+    refLineIdx++;
+  }
+
+  // Заполняем инпуты
+  inputs.forEach((input, idx) => {
+    if (values[idx] !== undefined) {
+      input.value = values[idx];
+    }
+  });
+
+  // Нажимаем кнопку проверки, если есть
+  const checkBtn = templateArea.querySelector('button.btn-primary');
+  if (checkBtn) {
+    checkBtn.click();
+  }
+}
+
+function fillFreeAnswer(d, referenceCode, container) {
+  // 1. Заполняем описание
+  const descInput = container.querySelector('#free-desc');
+  if (descInput) {
+    descInput.value = d.scenario;
+  }
+
+  // 2. Нажимаем кнопку генерации
+  const generateBtn = container.querySelector('#free-generate');
+  if (generateBtn && !generateBtn.hidden) {
+    generateBtn.click();
+    
+    // 3. После генерации заполняем редактор правильным кодом
+    setTimeout(() => {
+      const editorTextarea = container.querySelector('#free-editor textarea');
+      if (editorTextarea) {
+        editorTextarea.value = referenceCode;
+        editorTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      
+      // 4. Нажимаем кнопку подтверждения
+      const checkBtn = container.querySelector('#free-check');
+      if (checkBtn) {
+        checkBtn.click();
+      }
+    }, 100);
+  }
 }
 
 // ------------------- guided -------------------

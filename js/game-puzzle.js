@@ -28,39 +28,55 @@ export function start(level, container, callbacks) {
   };
 
   api.showAnswer = () => {
-    const solution = p.solution || p.lines;
-    if (p.kind === 'tiles') {
-      // Размещаем плитки в правильном порядке
-      const board = container.querySelector('#puzzle-board');
-      const slotsWrap = board.querySelector('.puzzle-slots');
-      const poolWrap = board.querySelector('.tiles-pool');
-      const slots = slotsWrap.querySelectorAll('.slot');
-      // Возвращаем все плитки в пул
-      poolWrap.innerHTML = '';
-      slots.forEach(s => { s.innerHTML = ''; });
-      // Расставляем правильный порядок
-      solution.forEach((tileId, i) => {
-        const tileData = p.tiles.find(t => t.id === tileId);
-        if (tileData && slots[i]) {
-          const el = document.createElement('div');
-          el.className = 'tile';
-          el.dataset.id = tileData.id;
-          el.textContent = tileData.text;
-          el.style.opacity = '0.7';
-          el.style.pointerEvents = 'none';
-          slots[i].appendChild(el);
-          slots[i].classList.add('is-occupied');
+      const solution = p.solution || p.lines;
+      if (p.kind === 'tiles') {
+        // Размещаем плитки в правильном порядке
+        const board = container.querySelector('#puzzle-board');
+        const slotsWrap = board.querySelector('.puzzle-slots');
+        const poolWrap = board.querySelector('.tiles-pool');
+        const slots = slotsWrap.querySelectorAll('.slot');
+        // Возвращаем все плитки в пул
+        poolWrap.innerHTML = '';
+        slots.forEach(s => { s.innerHTML = ''; });
+        // Расставляем правильный порядок
+        solution.forEach((tileId, i) => {
+          const tileData = p.tiles.find(t => t.id === tileId);
+          if (tileData && slots[i]) {
+            const el = document.createElement('div');
+            el.className = 'tile';
+            el.dataset.id = tileData.id;
+            el.textContent = tileData.text;
+            el.style.opacity = '0.7';
+            el.style.pointerEvents = 'none';
+            slots[i].appendChild(el);
+            slots[i].classList.add('is-occupied');
+          }
+        });
+      } else if (p.kind === 'reorder') {
+        const list = container.querySelector('.reorder-list');
+        if (list) {
+          const items = [...list.children];
+          // Build a map of normalized text -> element for robust matching
+          const itemMap = new Map();
+          items.forEach(li => {
+            const text = li.querySelector('span:last-child').textContent;
+            const key = text.replace(/\s+/g, ' ').trim();
+            if (!itemMap.has(key)) itemMap.set(key, []);
+            itemMap.get(key).push(li);
+          });
+          // Reorder by solution
+          solution.forEach(line => {
+            const key = line.replace(/\s+/g, ' ').trim();
+            const matches = itemMap.get(key);
+            if (matches && matches.length > 0) {
+              const li = matches.shift();
+              list.appendChild(li);
+            }
+          });
+          // Disable all items
+          items.forEach(li => { li.style.opacity = '0.7'; li.style.pointerEvents = 'none'; });
         }
-      });
-    } else if (p.kind === 'reorder') {
-      const list = container.querySelector('.reorder-list');
-      if (list) {
-        const items = [...list.children];
-        const sorted = solution.map(line => items.find(li => li.querySelector('span:last-child').textContent.trim() === line.trim())).filter(Boolean);
-        sorted.forEach(li => list.appendChild(li));
-        items.forEach(li => { li.style.opacity = '0.7'; li.style.pointerEvents = 'none'; });
-      }
-    } else if (p.kind === 'findbug') {
+      } else if (p.kind === 'findbug') {
       const lines = container.querySelectorAll('.findbug-line');
       lines.forEach((line, idx) => {
         if (p.bugLineIndices.includes(idx)) {
