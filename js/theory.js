@@ -294,7 +294,11 @@ export function getAllTheory() {
 export function isTheoryUnlocked(theoryId, gameState) {
   const theory = THEORY.find(t => t.id === theoryId);
   if (!theory) return false;
-  // Разблокируется после прохождения пазла соответствующего уровня
-  const progress = gameState.getLevelProgress(theory.levelId);
+  // Theory #1 is always unlocked
+  if (theory.id === 1) return true;
+  // Теория N открывается после прохождения пазла уровня N-1
+  const prevLevelId = theory.levelId - 1;
+  if (prevLevelId < 1) return true;
+  const progress = gameState.getLevelProgress(prevLevelId);
   return progress && progress.modes?.puzzle?.completed;
 }

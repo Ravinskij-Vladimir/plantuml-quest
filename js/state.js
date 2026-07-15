@@ -73,7 +73,7 @@ export const ACHIEVEMENTS = [
     key: 'speed-runner',
     name: 'Спидраннер',
     icon: '⚡',
-    description: 'Потрати менее 30 секунд на прохождение любого режима',
+    description: 'Потрать менее 30 секунд на прохождение любого режима',
     category: 'skill'
   },
   {
@@ -424,10 +424,15 @@ export const GameState = {
   },
 
   // Theory unlocking: theory unlocks when corresponding level's puzzle is completed
+  // Theory #1 is always unlocked by default
   isTheoryUnlocked(theoryId) {
     const theory = THEORY.find(t => t.id === theoryId);
     if (!theory) return false;
-    const levelProgress = this.getLevelProgress(theory.levelId);
+    if (theory.id === 1) return true;
+    // Теория N открывается после прохождения пазла уровня N-1
+    const prevLevelId = theory.levelId - 1;
+    if (prevLevelId < 1) return true;
+    const levelProgress = this.getLevelProgress(prevLevelId);
     return levelProgress.puzzle === true;
   },
 
@@ -436,7 +441,7 @@ export const GameState = {
     const project = PROJECTS.find(p => p.id === projectId);
     if (!project) return false;
     if (!project.unlockCondition) return true;
-    
+
     if (project.unlockCondition.startsWith('theory_')) {
       const theoryId = parseInt(project.unlockCondition.replace('theory_', ''));
       const theoryProgress = this.getTheoryProgress(theoryId);

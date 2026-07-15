@@ -148,6 +148,16 @@
   cursor: not-allowed;
 }
 
+.level-card__unlock-hint {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.35rem;
+  padding: 0.3rem 0.6rem;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius);
+  display: inline-block;
+}
+
 .level-card__badge {
   font-size: 0.75rem;
   text-transform: uppercase;

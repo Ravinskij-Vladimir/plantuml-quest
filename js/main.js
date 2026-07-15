@@ -414,11 +414,19 @@ function renderTheory() {
     card.className = `card level-card ${unlocked ? '' : 'locked'}`;
     card.setAttribute('role', unlocked ? 'button' : 'none');
     card.tabIndex = unlocked ? 0 : -1;
-    card.innerHTML = `
-      <div class="level-card__badge">${theory.type}</div>
-      <div class="level-card__title">${theory.icon} ${theory.title}${readBadge}</div>
-      <div class="level-card__desc">Уровень ${theory.levelId} — ${theory.sections.length} раздела</div>
-    `;
+    if (unlocked) {
+      card.innerHTML = `
+        <div class="level-card__badge">${theory.type}</div>
+        <div class="level-card__title">${theory.icon} ${theory.title}${readBadge}</div>
+        <div class="level-card__desc">Уровень ${theory.levelId} — ${theory.sections.length} раздела</div>
+      `;
+    } else {
+      card.innerHTML = `
+        <div class="level-card__badge">${theory.type}</div>
+        <div class="level-card__title">${theory.icon} ${theory.title}</div>
+        <div class="level-card__unlock-hint">🔒 Открывается после прохождения пазла уровня ${theory.levelId - 1}</div>
+      `;
+    }
 
     if (unlocked) {
       const open = () => navigate('theory-detail', theory.id);
