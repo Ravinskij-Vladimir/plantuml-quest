@@ -1,4 +1,6 @@
 import * as levels from './levels.js';
+import { THEORY } from './theory.js';
+import { PROJECTS } from './projects.js';
 
 const STORAGE_KEY = 'plantuml-game';
 
@@ -14,6 +16,8 @@ export const GameState = {
   data: {
     settings: { theme: 'dark' },
     progress: {},
+    theoryProgress: {},
+    projectProgress: {},
     achievements: [],
     stats: { codeNoHints: 0, totalHints: 0, sessionsStarted: 0 }
   },
@@ -49,6 +53,8 @@ export const GameState = {
   reset() {
     this.data.settings.theme = 'dark';
     this.data.progress = {};
+    this.data.theoryProgress = {};
+    this.data.projectProgress = {};
     this.data.achievements = [];
     this.data.stats = { codeNoHints: 0, totalHints: 0, sessionsStarted: 0 };
     this.save();
@@ -185,5 +191,104 @@ export const GameState = {
 
   isAchievementUnlocked(key) {
     return this.data.achievements.includes(key);
+  },
+
+  getTheoryProgress(id) {
+    return deepClone(this.data.theoryProgress[id]) || {
+      read: false,
+      completed: false,
+      timeSpent: 0
+    };
+  },
+
+  getProjectProgress(id) {
+    return deepClone(this.data.projectProgress[id]) || {
+      started: false,
+      completed: false,
+      diagramsCompleted: [],
+      timeSpent: 0
+    };
+  },
+
+  // Theory unlocking: theory unlocks when corresponding level's puzzle is completed
+  isTheoryUnlocked(theoryId) {
+    const theory = THEORY.find(t => t.id === theoryId);
+    if (!theory) return false;
+    const levelProgress = this.getLevelProgress(theory.levelId);
+    return levelProgress.puzzle === true;
+  },
+
+  // Project unlocking: projects unlock when specific theory is read
+  isProjectUnlocked(projectId) {
+    const project = PROJECTS.find(p => p.id === projectId);
+    if (!project) return false;
+    if (!project.unlockCondition) return true;
+    
+    if (project.unlockCondition.startsWith('theory_')) {
+      const theoryId = parseInt(project.unlockCondition.replace('theory_', ''));
+      const theoryProgress = this.getTheoryProgress(theoryId);
+      return theoryProgress.read === true;
+    }
+    return true;
+  },
+
+  completeTheory(theoryId) {
+    const tp = this.getTheoryProgress(theoryId);
+    tp.read = true;
+    tp.completed = true;
+    this.data.theoryProgress[theoryId] = tp;
+    this.save();
+    this.checkAchievements();
+    return tp;
+  },
+
+  markTheoryRead(theoryId, timeSpent = 0) {
+    const tp = this.getTheoryProgress(theoryId);
+    tp.read = true;
+    tp.timeSpent = (tp.timeSpent || 0) + timeSpent;
+    this.data.theoryProgress[theoryId] = tp;
+    this.save();
+    this.checkAchievements();
+    return tp;
+  },
+
+  startProject(projectId) {
+    const pp = this.getProjectProgress(projectId);
+    pp.started = true;
+    this.data.projectProgress[projectId] = pp;
+    this.save();
+    return pp;
+  },
+
+  completeProjectDiagram(projectId, diagramType) {
+    const pp = this.getProjectProgress(projectId);
+    if (!pp.diagramsCompleted.includes(diagramType)) {
+      pp.diagramsCompleted.push(diagramType);
+    }
+    const project = PROJECTS.find(p => p.id === projectId);
+    if (project && project.expectedPatterns) {
+      const allDone = project.expectedPatterns.every(p => pp.diagramsCompleted.includes(p));
+      if (allDone) {
+        pp.completed = true;
+      }
+    }
+    this.data.projectProgress[projectId] = pp;
+    this.save();
+    this.checkAchievements();
+    return pp;
+  },
+
+  getTheoryStats() {
+    const total = THEORY.length;
+    const read = THEORY.filter(t => this.getTheoryProgress(t.id).read).length;
+    const completed = THEORY.filter(t => this.getTheoryProgress(t.id).completed).length;
+    return { total, read, completed };
+  },
+
+  getProjectStats() {
+    const total = PROJECTS.length;
+    const started = PROJECTS.filter(p => this.getProjectProgress(p.id).started).length;
+    const completed = PROJECTS.filter(p => this.getProjectProgress(p.id).completed).length;
+    return { total, started, completed };
   }
 };

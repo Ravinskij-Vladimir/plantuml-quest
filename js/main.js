@@ -1,10 +1,14 @@
 import { GameState } from './state.js';
 import { LEVELS, getLevel } from './levels.js';
+import { THEORY, getTheoryByLevel } from './theory.js';
+import { PROJECTS, getProjectById } from './projects.js';
 import { initUI, showToast, showModal, hideModal, confetti } from './ui.js';
 import { initAccessibility } from './accessibility.js';
 import * as GamePuzzle from './game-puzzle.js';
 import * as GameCode from './game-code.js';
 import * as GameDescribe from './game-describe.js';
+import * as renderer from './renderer.js';
+import { PlantUMLValidator } from './validator.js';
 
 const MODULES = { puzzle: GamePuzzle, code: GameCode, describe: GameDescribe };
 const MODE_META = {
@@ -31,6 +35,10 @@ function bindEvents() {
   document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
   document.getElementById('back-to-home').addEventListener('click', () => navigate('home'));
   document.getElementById('back-to-levels').addEventListener('click', backToLevels);
+  document.getElementById('back-to-home-from-theory').addEventListener('click', () => navigate('home'));
+  document.getElementById('back-to-theory').addEventListener('click', () => navigate('theory'));
+  document.getElementById('back-to-home-from-projects').addEventListener('click', () => navigate('home'));
+  document.getElementById('back-to-projects').addEventListener('click', () => navigate('projects'));
   document.getElementById('btn-check').addEventListener('click', () => {
     if (!current.instance?.check) return;
     try {
@@ -93,6 +101,10 @@ function navigate(screen, ...args) {
     const [id, mode] = args;
     location.hash = `game/${id}/${mode || 'puzzle'}`;
   }
+  else if (screen === 'theory') location.hash = 'theory';
+  else if (screen === 'theory-detail') location.hash = `theory/${args[0]}`;
+  else if (screen === 'projects') location.hash = 'projects';
+  else if (screen === 'project-detail') location.hash = `project/${args[0]}`;
 }
 
 function toggleTheme() {
@@ -111,6 +123,13 @@ function renderHome() {
   const container = document.getElementById('mode-cards');
   container.innerHTML = '';
 
+  // Game modes section
+  const modesSection = document.createElement('div');
+  modesSection.className = 'home-section';
+  modesSection.innerHTML = '<h3 class="home-section-title">Режимы обучения</h3>';
+  const modesGrid = document.createElement('div');
+  modesGrid.className = 'mode-cards';
+  
   MODES.forEach((mode) => {
     const meta = MODE_META[mode];
     const done = GameState.getModeProgress(mode);
@@ -135,8 +154,66 @@ function renderHome() {
     const open = () => navigate('levels', mode);
     card.addEventListener('click', open);
     card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') open(); });
-    container.appendChild(card);
+    modesGrid.appendChild(card);
   });
+  modesSection.appendChild(modesGrid);
+  container.appendChild(modesSection);
+
+  // Theory section
+  const theoryStats = GameState.getTheoryStats();
+  const theorySection = document.createElement('div');
+  theorySection.className = 'home-section';
+  theorySection.innerHTML = `
+    <h3 class="home-section-title"><span class="home-section-icon">📚</span> Теория</h3>
+    <div class="home-section-stats">Прочитано: ${theoryStats.read}/${theoryStats.total} | Изучено: ${theoryStats.completed}/${theoryStats.total}</div>
+  `;
+  const theoryCard = document.createElement('div');
+  theoryCard.className = 'card card-hover mode-card';
+  theoryCard.setAttribute('role', 'button');
+  theoryCard.tabIndex = 0;
+  theoryCard.innerHTML = `
+    <div class="mode-card__icon">📚</div>
+    <div class="mode-card__title">Теория</div>
+    <div class="mode-card__desc">Материалы по темам пройденных уровней. Открываются после прохождения пазла.</div>
+    <div class="mode-card__progress">
+      <span>${theoryStats.read}/${theoryStats.total}</span>
+      <div class="mode-card__bar"><div class="mode-card__bar-inner" style="width:${Math.round((theoryStats.read/theoryStats.total)*100)}%"></div></div>
+      <span>${Math.round((theoryStats.read/theoryStats.total)*100)}%</span>
+    </div>
+  `;
+  const openTheory = () => navigate('theory');
+  theoryCard.addEventListener('click', openTheory);
+  theoryCard.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') openTheory(); });
+  theorySection.appendChild(theoryCard);
+  container.appendChild(theorySection);
+
+  // Projects section
+  const projectStats = GameState.getProjectStats();
+  const projectsSection = document.createElement('div');
+  projectsSection.className = 'home-section';
+  projectsSection.innerHTML = `
+    <h3 class="home-section-title"><span class="home-section-icon">🏗️</span> Практические проекты</h3>
+    <div class="home-section-stats">Начато: ${projectStats.started}/${projectStats.total} | Завершено: ${projectStats.completed}/${projectStats.total}</div>
+  `;
+  const projectCard = document.createElement('div');
+  projectCard.className = 'card card-hover mode-card';
+  projectCard.setAttribute('role', 'button');
+  projectCard.tabIndex = 0;
+  projectCard.innerHTML = `
+    <div class="mode-card__icon">🏗️</div>
+    <div class="mode-card__title">Проекты</div>
+    <div class="mode-card__desc">Применяй знания на практике: создай полные диаграммы для реальных задач.</div>
+    <div class="mode-card__progress">
+      <span>${projectStats.started}/${projectStats.total}</span>
+      <div class="mode-card__bar"><div class="mode-card__bar-inner" style="width:${projectStats.total > 0 ? Math.round((projectStats.started/projectStats.total)*100) : 0}%"></div></div>
+      <span>${projectStats.total > 0 ? Math.round((projectStats.started/projectStats.total)*100) : 0}%</span>
+    </div>
+  `;
+  const openProjects = () => navigate('projects');
+  projectCard.addEventListener('click', openProjects);
+  projectCard.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') openProjects(); });
+  projectsSection.appendChild(projectCard);
+  container.appendChild(projectsSection);
 }
 
 // ------------------- levels -------------------
@@ -299,6 +376,251 @@ function onModeComplete(mode, { usedHint = false, wrongAttempts = 0, showAnswer 
   }
 }
 
+// ------------------- theory -------------------
+function renderTheory() {
+  showScreen('screen-theory');
+  const grid = document.getElementById('theory-grid');
+  grid.innerHTML = '';
+
+  THEORY.forEach((theory) => {
+    const unlocked = GameState.isTheoryUnlocked(theory.id);
+    const progress = GameState.getTheoryProgress(theory.id);
+    const readBadge = progress.read ? ' <span class="theory-badge read">✓ Прочитано</span>' : '';
+
+    const card = document.createElement('div');
+    card.className = `card level-card ${unlocked ? '' : 'locked'}`;
+    card.setAttribute('role', unlocked ? 'button' : 'none');
+    card.tabIndex = unlocked ? 0 : -1;
+    card.innerHTML = `
+      <div class="level-card__badge">${theory.type}</div>
+      <div class="level-card__title">${theory.icon} ${theory.title}${readBadge}</div>
+      <div class="level-card__desc">Уровень ${theory.levelId} — ${theory.sections.length} раздела</div>
+    `;
+
+    if (unlocked) {
+      const open = () => navigate('theory-detail', theory.id);
+      card.addEventListener('click', open);
+      card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') open(); });
+    }
+
+    grid.appendChild(card);
+  });
+}
+
+function renderTheoryDetail(theoryId) {
+  const theory = getTheoryByLevel(theoryId);
+  if (!theory) {
+    navigate('theory');
+    return;
+  }
+
+  if (!GameState.isTheoryUnlocked(theory.id)) {
+    showToast('Эта теория пока недоступна. Пройди пазл уровня ${theory.levelId}.', 'warning');
+    navigate('theory');
+    return;
+  }
+
+  showScreen('screen-theory-detail');
+  document.getElementById('theory-detail-title').textContent = `${theory.icon} ${theory.title}`;
+  
+  const content = document.getElementById('theory-content');
+  content.innerHTML = theory.sections.map((section, idx) => `
+    <div class="theory-section">
+      <h3>${section.title}</h3>
+      <div class="theory-section-content">${formatTheoryContent(section.content)}</div>
+    </div>
+  `).join('');
+
+  // Mark as read
+  GameState.markTheoryRead(theory.id);
+
+  // Add "Mark Complete" button if not completed
+  const progress = GameState.getTheoryProgress(theory.id);
+  if (!progress.completed) {
+    const btnContainer = document.createElement('div');
+    btnContainer.className = 'theory-complete-btn';
+    btnContainer.innerHTML = `
+      <button id="btn-complete-theory" class="btn btn-primary" type="button">✓ Отметить как изученное</button>
+    `;
+    content.appendChild(btnContainer);
+    document.getElementById('btn-complete-theory').addEventListener('click', () => {
+      GameState.completeTheory(theory.id);
+      showToast('Теория отмечена как изученная!', 'success');
+      renderTheoryDetail(theory.id);
+    });
+  }
+}
+
+function formatTheoryContent(content) {
+  // Convert markdown-like formatting to HTML
+  return content
+    .replace(/```plantuml\n([\s\S]*?)```/g, '<pre class="language-plantuml"><code>$1</code></pre>')
+    .replace(/```\n([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>')
+    .replace(/^(.+)$/, '<p>$1</p>');
+}
+
+// ------------------- projects -------------------
+function renderProjects() {
+  showScreen('screen-projects');
+  const grid = document.getElementById('projects-grid');
+  grid.innerHTML = '';
+
+  PROJECTS.forEach((project) => {
+    const unlocked = GameState.isProjectUnlocked(project.id);
+    const progress = GameState.getProjectProgress(project.id);
+    const completedBadge = progress.completed ? ' <span class="theory-badge completed">✓ Завершён</span>' : '';
+    const startedBadge = progress.started && !progress.completed ? ' <span class="theory-badge in-progress">▶ В процессе</span>' : '';
+
+    const card = document.createElement('div');
+    card.className = `card level-card ${unlocked ? '' : 'locked'}`;
+    card.setAttribute('role', unlocked ? 'button' : 'none');
+    card.tabIndex = unlocked ? 0 : -1;
+    card.innerHTML = `
+      <div class="level-card__badge">${project.type}</div>
+      <div class="level-card__title">${project.icon} ${project.title}${completedBadge}${startedBadge}</div>
+      <div class="level-card__desc">${project.difficulty} • ~${project.estimatedTime} • ${project.description}</div>
+    `;
+
+    if (unlocked) {
+      const open = () => navigate('project-detail', project.id);
+      card.addEventListener('click', open);
+      card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') open(); });
+    }
+
+    grid.appendChild(card);
+  });
+}
+
+function renderProjectDetail(projectId) {
+  const project = getProjectById(projectId);
+  if (!project) {
+    navigate('projects');
+    return;
+  }
+
+  if (!GameState.isProjectUnlocked(project.id)) {
+    showToast('Этот проект пока недоступен. Изучи соответствующую теорию.', 'warning');
+    navigate('projects');
+    return;
+  }
+
+  showScreen('screen-project-detail');
+  document.getElementById('project-detail-title').textContent = `${project.icon} ${project.title}`;
+
+  const progress = GameState.getProjectProgress(project.id);
+  if (!progress.started) {
+    GameState.startProject(project.id);
+  }
+
+  const content = document.getElementById('project-content');
+  content.innerHTML = `
+    <div class="project-header">
+      <div class="project-meta">
+        <span class="project-difficulty">${project.difficulty}</span>
+        <span class="project-time">⏱ ${project.estimatedTime}</span>
+      </div>
+      <div class="project-scenario">${project.scenario}</div>
+      <div class="project-requirements">
+        <h4>Требования:</h4>
+        <ul>${project.requirements.map(r => `<li>${r}</li>`).join('')}</ul>
+      </div>
+    </div>
+
+    <div class="project-editor">
+      <div class="project-editor-toolbar">
+        <button id="btn-render-project" class="btn btn-primary" type="button">🔍 Рендерить</button>
+        <button id="btn-check-project" class="btn btn-secondary" type="button">✓ Проверить</button>
+        <button id="btn-download-project" class="btn btn-ghost" type="button">⬇ Скачать</button>
+      </div>
+      <div class="project-editor-split">
+        <div class="editor-pane">
+          <label for="project-code">PlantUML код</label>
+          <textarea id="project-code" class="project-code-editor" spellcheck="false">${project.starterCode || '@startuml\n\n@enduml'}</textarea>
+        </div>
+        <div class="preview-pane">
+          <label>Превью</label>
+          <div id="project-preview" class="project-preview"></div>
+        </div>
+      </div>
+      ${project.hints && project.hints.length > 0 ? `
+        <details class="project-hints">
+          <summary>💡 Подсказки</summary>
+          <ul>${project.hints.map(h => `<li>${h}</li>`).join('')}</ul>
+        </details>
+      ` : ''}
+      ${progress.completed ? '<div class="project-completed">✅ Проект завершён! Все диаграммы пройдены.</div>' : ''}
+    </div>
+  `;
+
+  // Setup editor with PlantUML highlighting
+  setupProjectEditor(project);
+}
+
+function setupProjectEditor(project) {
+  const textarea = document.getElementById('project-code');
+  const preview = document.getElementById('project-preview');
+  const renderBtn = document.getElementById('btn-render-project');
+  const checkBtn = document.getElementById('btn-check-project');
+  const downloadBtn = document.getElementById('btn-download-project');
+
+  let renderDebounce;
+  const doRender = async () => {
+    const code = textarea.value;
+    preview.innerHTML = '<em>Рендеринг...</em>';
+    try {
+      const svg = await PlantUMLAPI.renderSVG(code);
+      preview.innerHTML = svg || '<em class="error">Ошибка рендера. Проверьте синтаксис.</em>';
+    } catch (e) {
+      preview.innerHTML = `<em class="error">${e.message}</em>`;
+    }
+  };
+
+  textarea.addEventListener('input', () => {
+    clearTimeout(renderDebounce);
+    renderDebounce = setTimeout(doRender, 800);
+  });
+
+  renderBtn.addEventListener('click', doRender);
+
+  checkBtn.addEventListener('click', () => {
+    const code = textarea.value;
+    const validator = new PlantUMLValidator();
+    const ast = validator.parse(code);
+    
+    // Check for expected patterns
+    const missing = project.expectedPatterns.filter(p => !code.includes(p));
+    
+    if (missing.length === 0) {
+      showToast('✅ Все обязательные элементы найдены!', 'success');
+      // Mark this diagram type as completed
+      const diagramType = project.type;
+      GameState.completeProjectDiagram(project.id, diagramType);
+      
+      // Re-render to show completion
+      setTimeout(() => renderProjectDetail(project.id), 500);
+    } else {
+      showToast(`❌ Не хватает: ${missing.join(', ')}`, 'warning');
+    }
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    const code = textarea.value;
+    const blob = new Blob([code], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${project.title.replace(/\s+/g, '-').toLowerCase()}.puml`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // Initial render
+  doRender();
+}
+
 // ------------------- routing & extras -------------------
 function handleHash() {
   const hash = location.hash.replace(/^#/, '');
@@ -315,6 +637,18 @@ function handleHash() {
   } else if (parts[0] === 'game' && parts[1]) {
     showScreen('screen-game');
     startGame(parts[1], parts[2] || 'puzzle');
+  } else if (parts[0] === 'theory' && parts[1]) {
+    showScreen('screen-theory-detail');
+    renderTheoryDetail(parseInt(parts[1]));
+  } else if (parts[0] === 'theory') {
+    showScreen('screen-theory');
+    renderTheory();
+  } else if (parts[0] === 'project' && parts[1]) {
+    showScreen('screen-project-detail');
+    renderProjectDetail(parseInt(parts[1]));
+  } else if (parts[0] === 'projects') {
+    showScreen('screen-projects');
+    renderProjects();
   } else {
     showScreen('screen-home');
     renderHome();
