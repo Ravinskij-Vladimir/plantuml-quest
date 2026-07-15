@@ -6,9 +6,9 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // --- Настройки ---
-const PORT = 3000;
-const PLANTUML_HOST = 'localhost';
-const PLANTUML_PORT = 8080;
+const PORT = process.env.PORT || 3000;
+const PLANTUML_HOST = process.env.PLANTUML_HOST || 'localhost';
+const PLANTUML_PORT = process.env.PLANTUML_PORT || 8080;
 // -----------------
 
 const MIME = {
